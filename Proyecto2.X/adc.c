@@ -8,8 +8,49 @@
 
 #include "adc.h"
 
+/* Filtros internos para cada canal */
+static FiltroPromedio filtroTemp;
+static FiltroPromedio filtroLuz;
+
 /**
- * @brief Inicializa los registros del ADC para usar AN0 y AN1.
+ * @brief Inicializa un filtro de promedio movil.
+ * @param f Puntero a la estructura del filtro
+ */
+static void Filtro_Init(FiltroPromedio *f){
+    unsigned char i;
+    for(i = 0; i < FILTRO_MUESTRAS; i++){
+        f->muestras[i] = 0;
+    }
+    f->indice = 0;
+    f->lleno  = 0;
+}
+
+/**
+ * @brief Agrega una muestra y retorna el promedio actual.
+ * @param f Puntero a la estructura del filtro
+ * @param nueva_muestra Valor a agregar
+ * @return Promedio de las ultimas FILTRO_MUESTRAS muestras
+ */
+static unsigned int Filtro_Agregar(FiltroPromedio *f, unsigned int nueva_muestra){
+    unsigned long suma = 0;
+    unsigned char i, cantidad;
+
+    f->muestras[f->indice] = nueva_muestra;
+    f->indice = (f->indice + 1) % FILTRO_MUESTRAS;
+    if(f->indice == 0) f->lleno = 1;
+
+    cantidad = f->lleno ? FILTRO_MUESTRAS : f->indice;
+    for(i = 0; i < cantidad; i++){
+        suma += f->muestras[i];
+    }
+    return (unsigned int)(suma / cantidad);
+}
+
+/**
+ * @brief Inicializa el modulo ADC del PIC18F4550 y los filtros internos.
+ * Configura AN0 y AN1 como entradas analogicas con Vref interno (5V),
+ * justificacion a la derecha y reloj Fosc/32. Tambien inicializa los
+ * filtros de promedio movil para cada canal.
  */
 void ADC_Init(void){
     /* Registro ADCON1: Configuración de puertos
@@ -30,17 +71,22 @@ void ADC_Init(void){
     /* Registro ADCON0: Encender el módulo
      * ADON = 1 -> Habilita el módulo convertidor A/D. */
     ADCON0bits.ADON = 1;
+    
+    Filtro_Init(&filtroTemp);
+    Filtro_Init(&filtroLuz);
+    
 }
 
 /**
- * @brief Ejecuta una lectura cruda del ADC.
+ * @brief Lee un canal ADC y retorna el valor raw (0-1023).
+ * @param canal Canal a leer. Usar CANAL_LM35 (0) o CANAL_LDR (1).
+ * @return Valor ADC de 10 bits sin procesar (0-1023).
  */
 unsigned int ADC_Leer(unsigned char canal){
     // Selecciona el canal analógico a leer cargándolo en el registro ADCON0
     ADCON0bits.CHS = canal;
     
     // Espera un tiempo mínimo para que el capacitor "Sample and Hold" se cargue con el voltaje del pin. 
-    
     __delay_us(20);          
 
     // Inicia la conversión poniendo el bit GO/DONE
@@ -56,40 +102,23 @@ unsigned int ADC_Leer(unsigned char canal){
 }
 
 /**
- * @brief Lee el LM35, aplica filtro de promedio y convierte a temperatura.
+ * @brief Lee el LM35, aplica filtro y retorna temperatura
+ * en decimas de grado. Ejemplo: 235 = 23.5C
+ * @return Temperatura filtrada en decimas de grado Celsius
  */
 unsigned int ADC_LeerTemperatura(void){
-    unsigned long suma = 0;
-    
-    // Filtro de Promedio Móvil: Tomamos 10 muestras continuas para eliminar el ruido eléctrico
-    for(int i = 0; i < 10; i++){
-        suma += ADC_Leer(CANAL_LM35);
-        __delay_ms(2); // Pequeña pausa entre muestras para estabilizar el canal
-    }
-    unsigned int promedio = suma / 10;
-
-    /* Conversión LM35: 
-     * El LM35 entrega 10mV por cada °C. Con Vref de 5V, el ADC tiene 1024 pasos.
-     * Resolución = 5000mV / 1023 = 4.887 mV por paso del ADC.
-     * Multiplicamos por 5000 y dividimos entre 1023. El resultado incluye un decimal 
-     * implícito para mayor precisión al mostrar en pantalla. */
-    return (unsigned int)((promedio * 5000UL) / 1023UL);
+    unsigned int adc = ADC_Leer(CANAL_LM35);
+    unsigned int filtrado = Filtro_Agregar(&filtroTemp, adc);
+    return (unsigned int)((filtrado * 500UL) / 1023);
 }
 
 /**
- * @brief Lee el LDR, aplica filtro y lo convierte a porcentaje.
+ * @brief Lee el LDR, aplica filtro y retorna nivel de luz
+ * en porcentaje (0-100).
+ * @return Porcentaje de luz filtrado
  */
 unsigned int ADC_LeerLuz(void){
-    unsigned long suma = 0;
-    
-    /* Filtro de Promedio Móvil para estabilizar la lectura de luz */
-    for(int i = 0; i < 10; i++){
-        suma += ADC_Leer(CANAL_LDR);
-        __delay_ms(2);
-    }
-    unsigned int promedio = suma / 10;
-
-    /* Convertir el valor crudo del ADC (0-1023) a un porcentaje de iluminación (0-100%)
-     * Formula: (Valor_ADC * 100) / 1023 */
-    return (unsigned int)((promedio * 100UL) / 1023UL);
+    unsigned int adc = ADC_Leer(CANAL_LDR);
+    unsigned int filtrado = Filtro_Agregar(&filtroLuz, adc);
+    return (unsigned int)((filtrado * 100UL) / 1023);
 }

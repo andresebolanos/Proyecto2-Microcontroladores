@@ -1,7 +1,7 @@
 /**
  * @file adc.h
  * @brief Librería para la configuración y lectura del módulo ADC del PIC18F4550.
- * @author [Tu Nombre/Persona A]
+ * @author Andres Bolaños
  * * Este archivo contiene las definiciones de los canales analógicos y los
  * prototipos de las funciones necesarias para adquirir y filtrar los datos
  * de los sensores (LM35 y LDR) requeridos para el sistema de control ambiental.
@@ -51,5 +51,15 @@ unsigned int ADC_LeerTemperatura(void);
  * @return Porcentaje de iluminación (0% a 100%).
  */
 unsigned int ADC_LeerLuz(void);
+
+/* Numero de muestras para el filtro */
+#define FILTRO_MUESTRAS 8
+
+/* Estructura del filtro promedio movil */
+typedef struct {
+    unsigned int muestras[FILTRO_MUESTRAS];
+    unsigned char indice;
+    unsigned char lleno;
+} FiltroPromedio;
 
 #endif /* ADC_H */
