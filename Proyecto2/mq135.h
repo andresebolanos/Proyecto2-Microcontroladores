@@ -26,10 +26,10 @@
    UMBRALES ADC (0-1023)
    Modificar estos valores segun la calibracion del sensor 
    --------------------------------------------------------------------------- */
-#define MQ135_UMBRAL_EXCELENTE   200
-#define MQ135_UMBRAL_BUENA       400
-#define MQ135_UMBRAL_MODERADA    600
-#define MQ135_UMBRAL_MALA        800
+#define MQ135_UMBRAL_EXCELENTE   100
+#define MQ135_UMBRAL_BUENA       200
+#define MQ135_UMBRAL_MODERADA    300
+#define MQ135_UMBRAL_MALA        400
 
 
 /**
