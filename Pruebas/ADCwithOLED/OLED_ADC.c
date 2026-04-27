@@ -7,12 +7,6 @@ void main(void){
     /* Oscilador 8MHz interno */
     OSCCON = 0x72;
     
-    /* RD0 y RD1 como salidas digitales para LEDs */
-    TRISDbits.TRISD0 = 0;
-    TRISDbits.TRISD1 = 0;
-    LATDbits.LATD0 = 0;
-    LATDbits.LATD1 = 0;
-    
     /* Inicializar Módulos */
     ADC_Init();
     I2C_Init();   /* Inicializa la comunicación I2C */
@@ -26,22 +20,14 @@ void main(void){
     
     while(1){
         temperatura = ADC_LeerTemperatura(); /* Décimas de grado */
-        luz = ADC_LeerLuz();                 /* Porcentaje 0-100  */
-        luz = 100 - luz;
         
-        /* LED RD0: enciende si temperatura > 30.0°C (300 décimas) */
-        if(temperatura > 300){
-            LATDbits.LATD0 = 1;
+        luz = ADC_LeerLuz();                 
+        if(luz <= 100){
+            luz = 100 - luz; /* Invierte el porcentaje de luz */
         } else {
-            LATDbits.LATD0 = 0;
+            luz = 0; /* Protección por si hay un error de lectura */
         }
         
-        /* LED RD1: enciende si luz < 30% */
-        if(luz < 30){
-            LATDbits.LATD1 = 1;
-        } else {
-            LATDbits.LATD1 = 0;
-        }
         
         /* =========================================
          * ACTUALIZACIÓN DE PANTALLA OLED
