@@ -225,3 +225,23 @@ void OLED_String(unsigned char pagina, unsigned char col, const char *texto){
         texto++;
     }
 }
+
+
+// SE USA EN BME280
+unsigned char I2C_Read(unsigned char ack) {
+    unsigned char temp;
+    I2C_Ready();
+    SSPCON2bits.RCEN = 1; 
+    while(!SSPSTATbits.BF);
+    temp = SSPBUF;
+    I2C_Ready();
+    SSPCON2bits.ACKDT = (ack) ? 0 : 1; 
+    SSPCON2bits.ACKEN = 1;
+    return temp;
+}
+
+void I2C_Restart(void) {
+    I2C_Ready();
+    SSPCON2bits.RSEN = 1;
+    while(SSPCON2bits.RSEN);
+}

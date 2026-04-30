@@ -40,12 +40,14 @@ static unsigned int Filtro_Agregar(FiltroPromedio *f, unsigned int nueva_muestra
     if(f->indice == 0) f->lleno = 1;
 
     cantidad = f->lleno ? FILTRO_MUESTRAS : f->indice;
+    
+    // Sumar todas las muestras almacenadas
     for(i = 0; i < cantidad; i++){
         suma += f->muestras[i];
     }
-    return (unsigned int)(suma / cantidad);
-}
 
+    return (unsigned int)(suma / cantidad); 
+}
 /**
  * @brief Inicializa el modulo ADC del PIC18F4550 y los filtros internos.
  * Configura AN0 y AN1 como entradas analogicas con Vref interno (5V),
@@ -109,7 +111,7 @@ unsigned int ADC_Leer(unsigned char canal){
 unsigned int ADC_LeerTemperatura(void){
     unsigned int adc = ADC_Leer(CANAL_LM35);
     unsigned int filtrado = Filtro_Agregar(&filtroTemp, adc);
-    return (unsigned int)((filtrado * 500UL) / 1023);
+    return (unsigned int)((filtrado * 5000UL) / 1023);
 }
 
 /**
